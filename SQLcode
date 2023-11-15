@@ -1,0 +1,103 @@
+
+Certainly! Below is the SQL code to create a table with the specified columns for your dataset:
+
+sql
+Copy code
+CREATE TABLE ElectricVehicles (
+    VIN VARCHAR(20),
+    County VARCHAR(50),
+    City VARCHAR(50),
+    State CHAR(2),
+    PostalCode INT,
+    ModelYear INT,
+    Make VARCHAR(50),
+    Model VARCHAR(50),
+    ElectricVehicleType VARCHAR(50),
+    CAFVEligibility VARCHAR(50),
+    ElectricRange INT,
+    BaseMSRP INT,
+    LegislativeDistrict INT,
+    DOLVehicleID BIGINT,
+    VehicleLocation VARCHAR(100),
+    ElectricUtility VARCHAR(100),
+    CensusTract2020 INT
+);
+
+Create Table maker(
+	maker_id SERIAL PRIMARY KEY,
+	maker_name VARCHAR(255)
+);
+Create Table EV_type(
+	EV_type_id SERIAL PRIMARY KEY,
+	EV_type VARCHAR(255)
+);
+Create TABLE model(
+	model_id SERIAL PRIMARY KEY,
+	model_name VARCHAR(255),
+	EV_type_id INT REFERENCES EV_type(EV_type_id),
+	maker_id INT REFERENCES maker(maker_id)
+);
+INSERT INTO maker(maker_name)
+SELECT DISTINCT (Make)
+FROM ev;
+
+INSERT INTO EV_type(EV_type)
+SELECT DISTINCT( "electric_vehicle_type")
+FROM ev;
+
+
+INSERT INTO model(model_name, EV_type_id, maker_id)
+SELECT DISTINCT ev.Model, t.EV_type_id, m.maker_id
+FROM ev
+JOIN maker as m ON m.maker_name = ev.Make
+JOIN EV_type as t ON t.EV_type = ev."electric_vehicle_type";
+
+ALTER TABLE ev
+DROP COLUMN "electric_vehicle_type",
+DROP COLUMN Make;
+
+Create Table state(
+state_id SERIAL PRIMARY KEY,
+state_name VARCHAR(250));
+
+CREATE TABLE city(
+
+postal_code VARCHAR PRIMARY KEY,
+city_name VARCHAR (250),
+state_id INT REFERENCES state(state_id));
+
+INSERT INTO state(state_name)
+SELECT DISTINCT state FROM ev;
+
+INSERT INTO city(postal_code, city_name, state_id)
+SELECT DISTINCT ON ("postal_code") "postal_code", ev.city, state."state_id"
+FROM ev
+INNER JOIN state
+ON ev.state = state.state_name
+WHERE ev."postal_code" IS NOT NULL;
+
+
+ALTER TABLE EV
+DROP COLUMN city,
+DROP COLUMN state;
+
+alter table ev
+ADD CONSTRAINT fk_city
+FOREIGN KEY ("postal_code") 
+REFERENCES city(postal_code);
+
+ALTER TABLE ev
+ADD COLUMN model_id INT;
+
+UPDATE ev
+SET model_id = m.model_id
+FROM model as m
+WHERE ev.model = m.model_name;
+
+ALTER TABLE ev
+ADD CONSTRAINT fk_model
+FOREIGN KEY (model_id)
+REFERENCES model(model_id);
+
+ALTER TABLE ev
+DROP COLUMN model;
